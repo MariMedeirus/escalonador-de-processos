@@ -1,0 +1,7 @@
+TESTE-3
+COM
+E/S
+X=4
+COM
+COM
+SAIDA

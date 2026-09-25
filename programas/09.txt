@@ -1,0 +1,10 @@
+TESTE-9
+X=-2
+COM
+E/S
+COM
+COM
+COM
+E/S
+Y=9
+SAIDA
