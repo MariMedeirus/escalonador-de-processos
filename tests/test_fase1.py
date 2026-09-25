@@ -115,8 +115,11 @@ class TestEstruturas(unittest.TestCase):
         self.assertTrue(all(p.estado == Estado.PRONTO for p in prontos))
         creditos = [p.creditos for p in prontos]
         self.assertEqual(creditos, sorted(creditos, reverse=True))
-        self.assertEqual(prontos.primeiro().nome, "TESTE-9")
-        self.assertEqual([p.nome for p in prontos][-1], "TESTE-1")
+        self.assertEqual(
+            [p.nome for p in prontos],
+            ["TESTE-7", "TESTE-4", "TESTE-8", "TESTE-9", "TESTE-6",
+             "TESTE-5", "TESTE-10", "TESTE-2", "TESTE-3", "TESTE-1"],
+        )
 
 
 if __name__ == "__main__":

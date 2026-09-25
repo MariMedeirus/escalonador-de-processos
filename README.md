@@ -8,5 +8,5 @@ Escalonador de tarefas para Time Sharing em uma máquina fictícia (EP1), em Pyt
 - `escalonador/bcp.py` — classe `BCP` (PC, estado, prioridade, créditos, registradores X e Y, segmento de texto)
 - `escalonador/carregador.py` — leitura de `programas/NN.txt`, `prioridades.txt` e `quantum.txt`
 - `escalonador/estruturas.py` — `TabelaProcessos`, `FilaProntos` e `inicializar()`
-- `programas/` — arquivos de entrada (substituir pelos fornecidos em `EP1.zip`)
+- `programas/` — arquivos de entrada fornecidos (10 programas, `prioridades.txt` e `quantum.txt`)
 - `tests/` — testes (`python -m unittest discover -s tests`)
