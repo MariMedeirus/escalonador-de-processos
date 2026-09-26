@@ -107,7 +107,6 @@ def main(argv: list[str]) -> int:
     print("-" * 40)
     print("Simulação concluída. Todos os processos realizaram SAIDA.")
     return 0
-    return 0
 
 
 if __name__ == "__main__":
