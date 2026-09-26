@@ -61,6 +61,11 @@ class FilaProntos:
 
     def vazia(self) -> bool:
         return not self._fila
+    
+    def reordenar(self) -> None:
+        """Reordena a fila baseando-se nos créditos (maior para o menor).
+        Mantém a ordem de chegada para empates, pois o sort do Python é estável."""
+        self._fila.sort(key=lambda bcp: bcp.creditos, reverse=True)
 
     def __len__(self) -> int:
         return len(self._fila)
