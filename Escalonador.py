@@ -86,17 +86,27 @@ def main(argv: list[str]) -> int:
     processos = carregar_processos(diretorio)
     tabela, prontos = inicializar(processos)
 
-    print(f"Quantum: {quantum}")
-    print(f"Tabela de Processos ({len(tabela)} processos):")
-    for bcp in tabela:
-        print(
-            f"  {bcp.nome}: prioridade={bcp.prioridade} creditos={bcp.creditos} "
-            f"pc={bcp.pc} estado={bcp.estado.value} X={bcp.x} Y={bcp.y} "
-            f"instrucoes={len(bcp.segmento_texto)}"
-        )
-    print("Fila de Prontos (ordem de execução):")
-    for bcp in prontos:
-        print(f"  Carregando {bcp.nome}")
+    # print(f"Quantum: {quantum}")
+    # print(f"Tabela de Processos ({len(tabela)} processos):")
+    # for bcp in tabela:
+    #     print(
+    #         f"  {bcp.nome}: prioridade={bcp.prioridade} creditos={bcp.creditos} "
+    #         f"pc={bcp.pc} estado={bcp.estado.value} X={bcp.x} Y={bcp.y} "
+    #         f"instrucoes={len(bcp.segmento_texto)}"
+    #     )
+    # print("Fila de Prontos (ordem de execução):")
+    # for bcp in prontos:
+    #     print(f"  Carregando {bcp.nome}")
+    
+    print(f"Iniciando simulação com Quantum: {quantum}")
+    print("-" * 40)
+    
+    # Chama o motor principal
+    executar_motor(tabela, prontos, quantum)
+    
+    print("-" * 40)
+    print("Simulação concluída. Todos os processos realizaram SAIDA.")
+    return 0
     return 0
 
 
