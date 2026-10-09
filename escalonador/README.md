@@ -24,4 +24,4 @@ Abaixo está a descrição detalhada do papel de cada arquivo dentro deste módu
 
 O diagrama abaixo ilustra como as estruturas deste módulo se relacionam. O `carregador` lê os arquivos e cria os `BCPs`, que por sua vez são armazenados na `tabela de processos` e organizados para execução pela `fila de prontos`.
 
-![alt text](image.png)
+![Diagrama de classes](image.png)
