@@ -9,15 +9,14 @@ from .bcp import BCP, Estado
 
 # Importa as funcoes de leitura do nosso arquivo carregador.
 from .carregador import carregar_processos, ler_prioridades, ler_quantum
-
-# Traz as estruturas de dados principais que gerenciam a tabela e a fila de prontos.
-from .estruturas import FilaProntos, TabelaProcessos, inicializar
+from .estruturas import FilaBloqueados, FilaProntos, TabelaProcessos, inicializar
 
 # A lista abaixo define o que sera exportado quando alguem importar a pasta inteira.
 # Funciona como uma vitrine mostrando apenas as pecas que os outros arquivos podem usar.
 __all__ = [
     "BCP",
     "Estado",
+    "FilaBloqueados",
     "FilaProntos",
     "TabelaProcessos",
     "carregar_processos",

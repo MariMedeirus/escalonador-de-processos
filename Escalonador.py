@@ -1,144 +1,151 @@
 """
 Ponto de entrada do escalonador.
-
 Uso: python Escalonador.py [diretorio_programas]
 
 Por padrao, le o subdiretorio 'programas' ao lado deste arquivo.
-Nesta etapa, o programa carrega os processos, monta a tabela de processos e a
-fila de prontos e exibe o estado inicial do sistema.
+O programa carrega os processos, monta a tabela de processos e a Fila de
+Prontos, executa a simulacao e grava eventos e metricas em logXX.txt.
 """
 
 import sys
 from pathlib import Path
 
-from escalonador import carregar_processos, inicializar, ler_quantum
+from escalonador import FilaBloqueados, carregar_processos, inicializar, ler_quantum
 from escalonador.bcp import Estado
+from escalonador.logs import LogEscalonador
 
 DIRETORIO_PADRAO = Path(__file__).resolve().parent / "programas"
 
-def executar_motor(tabela, prontos, quantum):
-    """
-    Loop principal de execucao do processador.
-    Eh aqui que a simulacao do sistema operacional ganha vida e faz o time sharing.
-    """
-    
-    # Fila temporaria para os processos que pediram entrada e saida.
-    # Serve apenas para o codigo nao quebrar agora, a Mikelly fara a oficial.
-    bloqueados = [] 
 
-    # Laco principal do sistema operacional. 
-    # Enquanto houver processos vivos na tabela, o nosso processador continua trabalhando.
+def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
+    """Executa os processos, registrando eventos e métricas da simulação."""
+    # Mantem compatibilidade com chamadas que passam um logger como quarto argumento.
+    if isinstance(diretorio, LogEscalonador) and log is None:
+        log = diretorio
+        diretorio = None
+
+    # Guarda os processos em E/S e libera cada um apos dois usos da CPU por outros processos.
+    bloqueados = FilaBloqueados()
+    if log is None:
+        # Salva o log junto dos arquivos de entrada, ou na pasta do escalonador por padrao.
+        pasta_log = Path(diretorio) if diretorio is not None else Path(__file__).resolve().parent
+        log = LogEscalonador(quantum, pasta_log)
+
+    # Acumula as metricas legadas usadas pelo script de analise de quantum.
+    processo_anterior = None
+    total_trocas = 0
+    total_instrucoes = 0
+    processos_iniciados = len(tabela)
+    simulacao_concluida = True
+
+    # Cada iteracao representa uma passagem de um processo pela CPU.
     while len(tabela) > 0:
-        
-        # Se a fila de prontos esta vazia, o processador fica ocioso.
         if prontos.vazia():
-            # Aqui, no futuro, o tempo vai passar ate um processo bloqueado ser liberado.
-            # Usamos o break temporario so para evitar um loop infinito nos testes de agora.
-            break 
-            
-        # Troca de contexto.
-        # Tiramos o primeiro processo da fila de prontos, pois ele eh o que tem mais creditos.
+            # Sem processo pronto, nao ha outra passagem que possa concluir a espera de E/S.
+            simulacao_concluida = False
+            if processo_anterior is not None:
+                log.troca_contexto(processo_anterior.nome, "CPU ociosa")
+            break
+
+        # Seleciona o processo de maior credito e registra a troca de contexto.
         processo = prontos.remover_primeiro()
-        
-        # Mudamos o cracha dele para mostrar que ele eh o dono do processador neste momento.
+        log.troca_contexto(
+            processo_anterior.nome if processo_anterior is not None else None,
+            processo.nome,
+        )
         processo.estado = Estado.EXECUTANDO
-        
-        # O aluguel do processador custa um credito. 
-        # Se ele ainda tem creditos sobrando, descontamos na hora que ele entra.
+        total_trocas += 1
+
+        # O processo consome um credito ao entrar na CPU.
         if processo.creditos > 0:
             processo.creditos -= 1
 
-        # Preparacao do quantum.
-        # Preparamos os contadores para controlar o tempo que esse processo vai ficar processando.
         comandos_executados = 0
         fez_es = False
         terminou = False
 
-        # O processo so pode executar comandos ate bater no teto do quantum lido no arquivo.
+        # Executa no maximo o quantum, avancando o PC antes de tratar cada instrucao.
         while comandos_executados < quantum:
-            
-            # Pega o texto da instrucao exatamente onde o contador de programa esta apontando.
             instrucao = processo.instrucao_atual
-            
-            # Anda com o contador um passo para frente, senao ele roda a mesma linha para sempre.
             processo.pc += 1
             comandos_executados += 1
+            total_instrucoes += 1
 
-            # Interpretador de comandos.
+            # Interpreta atribuicoes, operacao sem efeito e instrucoes de controle.
             if instrucao.startswith("X="):
-                # Quebra a string no sinal de igual e salva apenas o numero inteiro no registrador.
+                # Separa o valor da atribuicao e atualiza o registrador X.
                 processo.x = int(instrucao.split("=")[1])
-                
             elif instrucao.startswith("Y="):
-                # Faz a mesma coisa que a instrucao anterior, mas salva no outro registrador.
+                # Aplica a mesma operacao ao registrador Y.
                 processo.y = int(instrucao.split("=")[1])
-                
             elif instrucao == "COM":
-                # Eh uma instrucao generica, nao muda variaveis, apenas gasta o tempo.
-                pass 
-                
+                # COM nao altera registradores, mas consome uma instrucao do quantum.
+                pass
             elif instrucao == "E/S":
-                # O programa pediu um dado externo. 
+                # Interrompe imediatamente; o restante do quantum nao e executado.
                 fez_es = True
-                # Corta o laco na hora e perde o resto do tempo disponivel.
-                break 
-                
+                log.interrupcao(processo.nome, "E/S")
+                break
             elif instrucao == "SAIDA":
-                # A instrucao final do arquivo de texto, o programa acabou.
+                # Marca o processo para remocao da tabela ao terminar este ciclo.
                 terminou = True
-                break 
+                log.termino(processo.nome)
+                break
 
-        # Decisao de destino.
-        # O tempo acabou e agora o sistema decide para onde mandar o processo.
+        # Define o destino do processo apos a CPU: removido, bloqueado ou pronto.
         if terminou:
-            # Se ele leu a saida, a vida util dele acabou e ele eh apagado da tabela principal.
             tabela.remover(processo)
-            
-        elif fez_es:
-            # Se ele fez entrada e saida, ele vai para a espera. 
-            # Muda o status para bloqueado e entra na fila temporaria.
-            processo.estado = Estado.BLOQUEADO
-            bloqueados.append(processo)
-            
-        else:
-            # Se chegou aqui, o quantum acabou normalmente por limite de tempo.
-            # O status volta a ser pronto e ele entra de volta na fila. 
-            # O metodo ja coloca ele na posicao correta de acordo com os creditos que sobraram.
-            prontos.inserir(processo) 
+        elif not fez_es:
+            prontos.inserir(processo)
+            log.interrupcao(processo.nome, "Fim de Quantum")
 
-        # Regra de redistribuicao de creditos.
-        # Soma todos os creditos que restam nos processos prontos e bloqueados.
-        total_creditos = sum(p.creditos for p in prontos) + sum(p.creditos for p in bloqueados)
-        
-        # A redistribuicao so acontece se todo mundo zerou os creditos e ainda existe gente viva.
+        # Quando todos esgotam os creditos, redistribui as prioridades iniciais.
+        total_creditos = sum(p.creditos or 0 for p in tabela)
         if total_creditos == 0 and len(tabela) > 0:
-            # Varre todos os processos ativos e devolve o credito baseando-se na prioridade do arquivo original.
             for p in tabela:
                 p.creditos = p.prioridade
-                
-            # Como a quantidade de creditos de todo mundo mudou agora, precisamos avisar a fila de prontos.
-            # Ela vai se reorganizar do maior para o menor credito.
             prontos.reordenar()
+
+        # Avanca somente os bloqueios existentes durante esta passagem pela CPU.
+        bloqueados.avancar_ciclo(prontos)
+        if fez_es:
+            # A E/S atual comeca a esperar depois do decremento dos bloqueios anteriores.
+            bloqueados.inserir(processo, FilaBloqueados.CICLOS_ESPERA)
+
+        processo_anterior = processo
+
+    # Registra a liberacao da CPU quando a simulacao termina sem impasse.
+    if simulacao_concluida and processo_anterior is not None:
+        log.troca_contexto(processo_anterior.nome, "CPU ociosa")
+
+    # Mantem no mesmo arquivo os dados consumidos pelo analise_quantum.py.
+    media_trocas = total_trocas / processos_iniciados if processos_iniciados else 0
+    media_instrucoes = total_instrucoes / total_trocas if total_trocas else 0
+    log.registrar(f"Quantum: {quantum}")
+    log.registrar(f"Media de trocas: {media_trocas:.2f}")
+    log.registrar(f"Media de instruções: {media_instrucoes:.2f}")
+    return simulacao_concluida
 
 
 def main(argv: list[str]) -> int:
+    # Usa o diretorio informado na linha de comando ou a pasta padrao de programas.
     diretorio = Path(argv[1]) if len(argv) > 1 else DIRETORIO_PADRAO
 
     quantum = ler_quantum(diretorio)
     processos = carregar_processos(diretorio)
     tabela, prontos = inicializar(processos)
-    
-    print(f"Iniciando simulacao com quantum: {quantum}")
+
+    print(f"Iniciando simulação com quantum: {quantum}")
     print("-" * 40)
-    
-    # Chama o motor principal passando as estruturas.
-    executar_motor(tabela, prontos, quantum)
-    
+    simulacao_concluida = executar_motor(tabela, prontos, quantum, diretorio)
     print("-" * 40)
-    print("Simulacao concluida. Todos os processos realizaram saida.")
-    
-    # Encerra o script com sucesso.
-    return 0
+
+    if simulacao_concluida:
+        print("Simulação concluída. Todos os processos realizaram SAIDA.")
+        return 0
+    print("Simulação encerrada com processos ainda bloqueados.")
+    return 1
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
