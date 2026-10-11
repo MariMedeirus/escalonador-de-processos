@@ -13,113 +13,108 @@ from pathlib import Path
 
 from escalonador import carregar_processos, inicializar, ler_quantum
 from escalonador.bcp import Estado
+from escalonador.estruturas import FilaBloqueados
 
 DIRETORIO_PADRAO = Path(__file__).resolve().parent / "programas"
 
-def executar_motor(tabela, prontos, quantum):
+def executar_motor(tabela, prontos, quantum, diretorio):
     """
     Loop principal de execucao do processador.
     Eh aqui que a simulacao do sistema operacional ganha vida e faz o time sharing.
     """
     
-    # Fila temporaria para os processos que pediram entrada e saida.
-    # Serve apenas para o codigo nao quebrar agora, a Mikelly fara a oficial.
-    bloqueados = [] 
+    # Fila que gerencia o tempo de espera de entrada e saida.
+    bloqueados = FilaBloqueados() 
+
+    # Variaveis para acumular os dados que vao para o relatorio.
+    total_trocas = 0
+    total_instrucoes = 0
+    processos_iniciados = len(tabela)
 
     # Laco principal do sistema operacional. 
-    # Enquanto houver processos vivos na tabela, o nosso processador continua trabalhando.
     while len(tabela) > 0:
         
         # Se a fila de prontos esta vazia, o processador fica ocioso.
         if prontos.vazia():
-            # Aqui, no futuro, o tempo vai passar ate um processo bloqueado ser liberado.
-            # Usamos o break temporario so para evitar um loop infinito nos testes de agora.
-            break 
+            # Trava de seguranca.
+            if bloqueados.vazia():
+                break 
+            
+            # O processador nao faz nada, mas o tempo passa para quem esta bloqueado.
+            liberados = bloqueados.passar_tempo()
+            for p in liberados:
+                prontos.inserir(p)
+            continue 
             
         # Troca de contexto.
-        # Tiramos o primeiro processo da fila de prontos, pois ele eh o que tem mais creditos.
         processo = prontos.remover_primeiro()
-        
-        # Mudamos o cracha dele para mostrar que ele eh o dono do processador neste momento.
         processo.estado = Estado.EXECUTANDO
         
-        # O aluguel do processador custa um credito. 
-        # Se ele ainda tem creditos sobrando, descontamos na hora que ele entra.
+        # Toda vez que um processo entra na cpu, contabilizamos uma troca.
+        total_trocas += 1
+        
         if processo.creditos > 0:
             processo.creditos -= 1
 
-        # Preparacao do quantum.
-        # Preparamos os contadores para controlar o tempo que esse processo vai ficar processando.
         comandos_executados = 0
         fez_es = False
         terminou = False
 
-        # O processo so pode executar comandos ate bater no teto do quantum lido no arquivo.
         while comandos_executados < quantum:
             
-            # Pega o texto da instrucao exatamente onde o contador de programa esta apontando.
             instrucao = processo.instrucao_atual
-            
-            # Anda com o contador um passo para frente, senao ele roda a mesma linha para sempre.
             processo.pc += 1
             comandos_executados += 1
+            
+            # Conta o total global de instrucoes para fazer a media depois.
+            total_instrucoes += 1
 
-            # Interpretador de comandos.
             if instrucao.startswith("X="):
-                # Quebra a string no sinal de igual e salva apenas o numero inteiro no registrador.
                 processo.x = int(instrucao.split("=")[1])
-                
             elif instrucao.startswith("Y="):
-                # Faz a mesma coisa que a instrucao anterior, mas salva no outro registrador.
                 processo.y = int(instrucao.split("=")[1])
-                
             elif instrucao == "COM":
-                # Eh uma instrucao generica, nao muda variaveis, apenas gasta o tempo.
                 pass 
-                
             elif instrucao == "E/S":
-                # O programa pediu um dado externo. 
                 fez_es = True
-                # Corta o laco na hora e perde o resto do tempo disponivel.
                 break 
-                
             elif instrucao == "SAIDA":
-                # A instrucao final do arquivo de texto, o programa acabou.
                 terminou = True
                 break 
 
-        # Decisao de destino.
-        # O tempo acabou e agora o sistema decide para onde mandar o processo.
+        # O quantum acabou, entao passamos o tempo para quem estava bloqueado.
+        liberados = bloqueados.passar_tempo()
+
+        # Decisao de destino do processo atual.
         if terminou:
-            # Se ele leu a saida, a vida util dele acabou e ele eh apagado da tabela principal.
             tabela.remover(processo)
-            
         elif fez_es:
-            # Se ele fez entrada e saida, ele vai para a espera. 
-            # Muda o status para bloqueado e entra na fila temporaria.
-            processo.estado = Estado.BLOQUEADO
-            bloqueados.append(processo)
-            
+            # Vai para a fila de bloqueados passar por 2 ciclos.
+            bloqueados.inserir(processo, 2)
         else:
-            # Se chegou aqui, o quantum acabou normalmente por limite de tempo.
-            # O status volta a ser pronto e ele entra de volta na fila. 
-            # O metodo ja coloca ele na posicao correta de acordo com os creditos que sobraram.
             prontos.inserir(processo) 
 
+        # Os processos que terminaram a E/S voltam para a fila de prontos.
+        for p in liberados:
+            prontos.inserir(p)
+
         # Regra de redistribuicao de creditos.
-        # Soma todos os creditos que restam nos processos prontos e bloqueados.
         total_creditos = sum(p.creditos for p in prontos) + sum(p.creditos for p in bloqueados)
-        
-        # A redistribuicao so acontece se todo mundo zerou os creditos e ainda existe gente viva.
         if total_creditos == 0 and len(tabela) > 0:
-            # Varre todos os processos ativos e devolve o credito baseando-se na prioridade do arquivo original.
             for p in tabela:
                 p.creditos = p.prioridade
-                
-            # Como a quantidade de creditos de todo mundo mudou agora, precisamos avisar a fila de prontos.
-            # Ela vai se reorganizar do maior para o menor credito.
             prontos.reordenar()
 
+    # Fim da simulacao. Calcula as medias para o grafico.
+    media_trocas = total_trocas / processos_iniciados if processos_iniciados > 0 else 0
+    media_instrucoes = total_instrucoes / total_trocas if total_trocas > 0 else 0
+
+    # Gera o arquivo de log no mesmo diretorio de programas.
+    caminho_log = diretorio / f"log{quantum:02d}.txt"
+    with open(caminho_log, "w", encoding="utf-8") as f:
+        f.write(f"Quantum: {quantum}\n")
+        f.write(f"Media de trocas: {media_trocas:.2f}\n")
+        f.write(f"Media de instrucoes: {media_instrucoes:.2f}\n")
 
 def main(argv: list[str]) -> int:
     diretorio = Path(argv[1]) if len(argv) > 1 else DIRETORIO_PADRAO
@@ -131,13 +126,11 @@ def main(argv: list[str]) -> int:
     print(f"Iniciando simulacao com quantum: {quantum}")
     print("-" * 40)
     
-    # Chama o motor principal passando as estruturas.
-    executar_motor(tabela, prontos, quantum)
+    # Passamos o diretorio para ele saber onde salvar o txt.
+    executar_motor(tabela, prontos, quantum, diretorio)
     
     print("-" * 40)
-    print("Simulacao concluida. Todos os processos realizaram saida.")
-    
-    # Encerra o script com sucesso.
+    print("Simulacao concluida. Log gerado com sucesso.")
     return 0
 
 if __name__ == "__main__":
