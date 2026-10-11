@@ -110,6 +110,41 @@ class FilaProntos:
     def __iter__(self) -> Iterator[BCP]:
         # Permite usar um laco for para passar por todos os processos que estao na fila.
         return iter(self._fila)
+    
+class FilaBloqueados:
+    """
+    Fila para processos que pediram entrada e saida.
+    """
+    def __init__(self) -> None:
+        # Lista que guarda pares: o processo e os ciclos restantes de espera.
+        self._fila: list[list] = []
+
+    def inserir(self, bcp: BCP, ciclos_espera: int = 2) -> None:
+        # Quando entra na fila, muda o estado e define o tempo de castigo.
+        bcp.estado = Estado.BLOQUEADO
+        self._fila.append([bcp, ciclos_espera])
+
+    def passar_tempo(self) -> list[BCP]:
+        """
+        Desconta um ciclo de espera de todos os processos bloqueados.
+        Devolve uma lista com aqueles que terminaram a espera.
+        """
+        liberados = []
+        for item in self._fila:
+            item[1] -= 1
+            if item[1] <= 0:
+                liberados.append(item[0])
+
+        # Filtra a fila para manter apenas quem ainda tem tempo maior que zero.
+        self._fila = [item for item in self._fila if item[1] > 0]
+        return liberados
+
+    def vazia(self) -> bool:
+        return len(self._fila) == 0
+
+    def __iter__(self) -> Iterator[BCP]:
+        # Permite iterar apenas sobre os processos, ignorando o tempo.
+        return iter(item[0] for item in self._fila)
 
 
 def inicializar(processos: list[BCP]) -> tuple[TabelaProcessos, FilaProntos]:

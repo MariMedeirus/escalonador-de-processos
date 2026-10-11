@@ -19,6 +19,7 @@ __all__ = [
     "BCP",
     "Estado",
     "FilaProntos",
+    "FilaBloqueados",
     "TabelaProcessos",
     "carregar_processos",
     "inicializar",
