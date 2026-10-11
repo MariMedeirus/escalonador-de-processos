@@ -1,4 +1,11 @@
-"""Ponto de entrada do escalonador de processos."""
+"""
+Ponto de entrada do escalonador.
+Uso: python Escalonador.py [diretorio_programas]
+
+Por padrao, le o subdiretorio 'programas' ao lado deste arquivo.
+O programa carrega os processos, monta a tabela de processos e a Fila de
+Prontos, executa a simulacao e grava eventos e metricas em logXX.txt.
+"""
 
 import sys
 from pathlib import Path
@@ -66,16 +73,21 @@ def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
 
             # Interpreta atribuicoes, operacao sem efeito e instrucoes de controle.
             if instrucao.startswith("X="):
+                # Separa o valor da atribuicao e atualiza o registrador X.
                 processo.x = int(instrucao.split("=")[1])
             elif instrucao.startswith("Y="):
+                # Aplica a mesma operacao ao registrador Y.
                 processo.y = int(instrucao.split("=")[1])
             elif instrucao == "COM":
+                # COM nao altera registradores, mas consome uma instrucao do quantum.
                 pass
             elif instrucao == "E/S":
+                # Interrompe imediatamente; o restante do quantum nao e executado.
                 fez_es = True
                 log.interrupcao(processo.nome, "E/S")
                 break
             elif instrucao == "SAIDA":
+                # Marca o processo para remocao da tabela ao terminar este ciclo.
                 terminou = True
                 log.termino(processo.nome)
                 break
