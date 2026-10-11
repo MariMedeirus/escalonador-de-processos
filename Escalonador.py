@@ -38,6 +38,10 @@ def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
     total_instrucoes = 0
     processos_iniciados = len(tabela)
     simulacao_concluida = True
+    
+    # Registra o carregamento de todos os processos antes da CPU ligar
+    for p in tabela:
+        log.carregamento(p.nome)
 
     # Cada iteracao representa uma passagem de um processo pela CPU.
     while len(tabela) > 0:
@@ -85,12 +89,12 @@ def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
             elif instrucao == "E/S":
                 # Interrompe imediatamente; o restante do quantum nao e executado.
                 fez_es = True
-                log.interrupcao(processo.nome, "E/S")
+                log.interrupcao(processo.nome, "E/S", comandos_executados)
                 break
             elif instrucao == "SAIDA":
                 # Marca o processo para remocao da tabela ao terminar este ciclo.
                 terminou = True
-                log.termino(processo.nome)
+                log.termino(processo.nome, processo.x, processo.y)
                 break
 
         # Define o destino do processo apos a CPU: removido, bloqueado ou pronto.
@@ -98,7 +102,7 @@ def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
             tabela.remover(processo)
         elif not fez_es:
             prontos.inserir(processo)
-            log.interrupcao(processo.nome, "Fim de Quantum")
+            log.interrupcao(processo.nome, "Fim de Quantum", comandos_executados)
 
         # Quando todos esgotam os creditos, redistribui as prioridades iniciais.
         total_creditos = sum(p.creditos or 0 for p in tabela)
