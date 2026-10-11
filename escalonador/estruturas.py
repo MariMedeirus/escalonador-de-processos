@@ -75,6 +75,11 @@ class FilaProntos:
         # Insere o processo exatamente na posicao encontrada.
         self._fila.insert(posicao, bcp)
 
+    def inserir_no_fim(self, bcp: BCP) -> None:
+        """Insere o BCP no fim da fila, preservando a ordem de chegada."""
+        bcp.estado = Estado.PRONTO
+        self._fila.append(bcp)
+
     def remover_primeiro(self) -> BCP:
         """
         Remove e devolve o processo de maior numero de creditos que esta no topo da fila.
@@ -115,14 +120,19 @@ class FilaBloqueados:
     """
     Fila para processos que pediram entrada e saida.
     """
+    CICLOS_ESPERA = 2
+
     def __init__(self) -> None:
         # Lista que guarda pares: o processo e os ciclos restantes de espera.
         self._fila: list[list] = []
 
-    def inserir(self, bcp: BCP, ciclos_espera: int = 2) -> None:
+    def inserir(self, bcp: BCP, ciclos_espera: int = CICLOS_ESPERA) -> None:
         # Quando entra na fila, muda o estado e define o tempo de castigo.
         bcp.estado = Estado.BLOQUEADO
         self._fila.append([bcp, ciclos_espera])
+
+    def bloquear(self, bcp: BCP) -> None:
+        self.inserir(bcp, self.CICLOS_ESPERA)
 
     def passar_tempo(self) -> list[BCP]:
         """
@@ -141,6 +151,13 @@ class FilaBloqueados:
 
     def vazia(self) -> bool:
         return len(self._fila) == 0
+
+    def avancar_ciclo(self, prontos: FilaProntos) -> None:
+        for processo in self.passar_tempo():
+            prontos.inserir_no_fim(processo)
+
+    def __len__(self) -> int:
+        return len(self._fila)
 
     def __iter__(self) -> Iterator[BCP]:
         # Permite iterar apenas sobre os processos, ignorando o tempo.

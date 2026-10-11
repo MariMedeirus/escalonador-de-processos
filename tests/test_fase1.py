@@ -7,7 +7,9 @@ from pathlib import Path
 from escalonador import BCP, Estado, carregar_processos, inicializar, ler_prioridades, ler_quantum
 from escalonador.bcp import TAMANHO_MAXIMO_PROGRAMA
 from escalonador.carregador import ler_programa
-from escalonador.estruturas import FilaProntos
+from escalonador.estruturas import FilaBloqueados, FilaProntos
+from escalonador.logs import LogEscalonador
+from Escalonador import executar_motor
 
 PROGRAMAS_EXEMPLO = Path(__file__).resolve().parent.parent / "programas"
 
@@ -120,6 +122,55 @@ class TestEstruturas(unittest.TestCase):
             ["TESTE-7", "TESTE-4", "TESTE-8", "TESTE-9", "TESTE-6",
              "TESTE-5", "TESTE-10", "TESTE-2", "TESTE-3", "TESTE-1"],
         )
+
+    def test_fila_bloqueados_libera_apos_dois_ciclos_no_fim(self):
+        primeiro = BCP("A", 1, ["SAIDA"])
+        segundo = BCP("B", 1, ["SAIDA"])
+        bloqueado = BCP("IO", 1, ["SAIDA"])
+        prontos = FilaProntos()
+        prontos.inserir(primeiro)
+        prontos.inserir(segundo)
+        bloqueados = FilaBloqueados()
+
+        bloqueados.bloquear(bloqueado)
+        bloqueados.avancar_ciclo(prontos)
+        self.assertEqual(len(bloqueados), 1)
+        self.assertEqual([p.nome for p in prontos], ["A", "B"])
+
+        bloqueados.avancar_ciclo(prontos)
+        self.assertEqual(len(bloqueados), 0)
+        self.assertEqual([p.nome for p in prontos], ["A", "B", "IO"])
+        self.assertEqual(bloqueado.estado, Estado.PRONTO)
+
+
+class TestMotorELogs(unittest.TestCase):
+    def test_es_interrompe_e_log_registra_eventos(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        diretorio = Path(self._tmp.name)
+
+        processo_io = BCP("IO", 3, ["E/S", "SAIDA"])
+        processo_cpu = BCP("CPU", 3, ["COM", "COM", "COM", "COM", "COM", "SAIDA"])
+        tabela, prontos = inicializar([processo_io, processo_cpu])
+        log = LogEscalonador(3, diretorio)
+
+        self.assertTrue(executar_motor(tabela, prontos, 3, log))
+
+        conteudo = (diretorio / "log03.txt").read_text(encoding="utf-8")
+        self.assertIn("Troca de contexto: saiu CPU ociosa; entrou IO", conteudo)
+        self.assertIn("Interrupção: processo IO; motivo: E/S", conteudo)
+        self.assertIn("Interrupção: processo CPU; motivo: Fim de Quantum", conteudo)
+        self.assertIn("Término: processo CPU; instrução: SAIDA", conteudo)
+        self.assertIn("Término: processo IO; instrução: SAIDA", conteudo)
+        self.assertEqual(len(tabela), 0)
+
+    def test_nome_do_log_usa_quantum_com_dois_digitos(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        diretorio = Path(self._tmp.name)
+
+        self.assertEqual(LogEscalonador(2, diretorio).caminho.name, "log02.txt")
+        self.assertEqual(LogEscalonador(10, diretorio).caminho.name, "log10.txt")
 
 
 if __name__ == "__main__":
