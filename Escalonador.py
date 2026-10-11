@@ -28,7 +28,8 @@ def executar_motor(tabela, prontos, quantum, diretorio=None, log=None):
     bloqueados = FilaBloqueados()
     if log is None:
         # Salva o log junto dos arquivos de entrada, ou na pasta do escalonador por padrao.
-        pasta_log = Path(diretorio) if diretorio is not None else Path(__file__).resolve().parent
+        pasta_log = Path(diretorio) / "saidas" if diretorio is not None else Path(__file__).resolve().parent / "saidas"
+        pasta_log.mkdir(exist_ok=True)
         log = LogEscalonador(quantum, pasta_log)
 
     # Acumula as metricas legadas usadas pelo script de analise de quantum.

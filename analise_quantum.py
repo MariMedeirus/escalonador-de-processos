@@ -2,13 +2,16 @@ import os
 import subprocess
 import matplotlib.pyplot as plt
 import re 
+import shutil
 
 # Valores de quantum escolhidos para teste (pelo menos 10 valores)
 
-quantums_teste = [2, 4, 6, 8, 10, 12, 14, 16, 18, 21]
-
+quantums_teste = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 21]
 diretorio_programas = "programas"
+diretorio_saidas = os.path.join(diretorio_programas, "saidas")
 caminho_quantum = os.path.join(diretorio_programas, "quantum.txt")
+
+os.makedirs(diretorio_saidas, exist_ok=True)
 
 def executar_testes():
     medias_trocas = []
@@ -26,7 +29,7 @@ def executar_testes():
 
         # Ler o arquivo de saída
         nome_log = f"log{quantum:02d}.txt"
-        caminho_log = os.path.join(diretorio_programas, nome_log)
+        caminho_log = os.path.join(diretorio_saidas, nome_log)
 
         trocas = 0.0
         instrucoes = 0.0
@@ -61,7 +64,7 @@ def plotar_graficos(quantums, trocas, instrucoes):
     plt.ylabel("Média de trocas por processo")
     plt.xticks(quantums)
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.savefig("grafico_trocas.png")
+    plt.savefig(os.path.join(diretorio_saidas, "grafico_trocas.png"))
     plt.show()
 
     # Gráfico 2: Média de instruções executadas por quantum
@@ -72,7 +75,7 @@ def plotar_graficos(quantums, trocas, instrucoes):
     plt.ylabel("Média de instruções executadas por quantum")
     plt.xticks(quantums)
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.savefig("grafico_instrucoes.png")
+    plt.savefig(os.path.join(diretorio_saidas, "grafico_instrucoes.png"))
     plt.show()
 
 if __name__ == "__main__":
