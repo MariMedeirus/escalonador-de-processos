@@ -56,12 +56,12 @@ def executar_testes():
 
 def plotar_graficos(quantums, trocas, instrucoes):
 
-    # Gráfico 1: Média de trocas por processo
+    # Gráfico 1: Média de trocas por contexto
     plt.figure(figsize=(10, 5))
     plt.plot(quantums, trocas, marker='o', linestyle='-' , color='b')
-    plt.title("Média de trocas por processo vs Tamanho do Quantum")
+    plt.title("Média de trocas por contexto vs Tamanho do Quantum")
     plt.xlabel("Valor do Quantum")
-    plt.ylabel("Média de trocas por processo")
+    plt.ylabel("Média de trocas por contexto")
     plt.xticks(quantums)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.savefig(os.path.join(diretorio_saidas, "grafico_trocas.png"))
@@ -72,7 +72,7 @@ def plotar_graficos(quantums, trocas, instrucoes):
     plt.plot(quantums, instrucoes, marker='s', linestyle='-' , color='r')
     plt.title("Média de instruções executadas por Quantum")
     plt.xlabel("Valor do Quantum")
-    plt.ylabel("Média de instruções executadas por quantum")
+    plt.ylabel("Média de instruções executadas por Quantum")
     plt.xticks(quantums)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.savefig(os.path.join(diretorio_saidas, "grafico_instrucoes.png"))
