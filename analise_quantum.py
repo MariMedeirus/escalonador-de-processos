@@ -75,10 +75,10 @@ def plotar_graficos(quantums, trocas, instrucoes):
     plt.savefig("grafico_instrucoes.png")
     plt.show()
 
-    if __name__ == "__main__":
-        print("A iniciar a execução dos testes do escalonador...")
-        valor_quantum, media_troca, media_instrucoes = executar_testes()
-        print("\nExecuções concluídas! A gerar os gráficos...")
-        plotar_graficos(valor_quantum, media_troca, media_instrucoes)
-        print("Gráficos gerados com sucesso!")
+if __name__ == "__main__":
+    print("A iniciar a execução dos testes do escalonador...")
+    valor_quantum, media_troca, media_instrucoes = executar_testes()
+    print("\nExecuções concluídas! A gerar os gráficos...")
+    plotar_graficos(valor_quantum, media_troca, media_instrucoes)
+    print("Gráficos gerados com sucesso!")
         
