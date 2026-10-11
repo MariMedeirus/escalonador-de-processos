@@ -1,0 +1,74 @@
+Troca de contexto: saiu CPU ociosa; entrou TESTE-7
+Interrupção: processo TESTE-7; motivo: E/S
+Troca de contexto: saiu TESTE-7; entrou TESTE-4
+Interrupção: processo TESTE-4; motivo: E/S
+Troca de contexto: saiu TESTE-4; entrou TESTE-8
+Interrupção: processo TESTE-8; motivo: Fim de Quantum
+Troca de contexto: saiu TESTE-8; entrou TESTE-9
+Interrupção: processo TESTE-9; motivo: E/S
+Troca de contexto: saiu TESTE-9; entrou TESTE-8
+Interrupção: processo TESTE-8; motivo: Fim de Quantum
+Troca de contexto: saiu TESTE-8; entrou TESTE-6
+Interrupção: processo TESTE-6; motivo: E/S
+Troca de contexto: saiu TESTE-6; entrou TESTE-8
+Término: processo TESTE-8; instrução: SAIDA
+Troca de contexto: saiu TESTE-8; entrou TESTE-5
+Interrupção: processo TESTE-5; motivo: E/S
+Troca de contexto: saiu TESTE-5; entrou TESTE-10
+Interrupção: processo TESTE-10; motivo: E/S
+Troca de contexto: saiu TESTE-10; entrou TESTE-2
+Interrupção: processo TESTE-2; motivo: E/S
+Troca de contexto: saiu TESTE-2; entrou TESTE-3
+Interrupção: processo TESTE-3; motivo: Fim de Quantum
+Troca de contexto: saiu TESTE-3; entrou TESTE-1
+Interrupção: processo TESTE-1; motivo: E/S
+Troca de contexto: saiu TESTE-1; entrou TESTE-7
+Interrupção: processo TESTE-7; motivo: E/S
+Troca de contexto: saiu TESTE-7; entrou TESTE-4
+Interrupção: processo TESTE-4; motivo: E/S
+Troca de contexto: saiu TESTE-4; entrou TESTE-9
+Interrupção: processo TESTE-9; motivo: Fim de Quantum
+Troca de contexto: saiu TESTE-9; entrou TESTE-9
+Interrupção: processo TESTE-9; motivo: E/S
+Troca de contexto: saiu TESTE-9; entrou TESTE-6
+Interrupção: processo TESTE-6; motivo: E/S
+Troca de contexto: saiu TESTE-6; entrou TESTE-5
+Interrupção: processo TESTE-5; motivo: E/S
+Troca de contexto: saiu TESTE-5; entrou TESTE-3
+Término: processo TESTE-3; instrução: SAIDA
+Troca de contexto: saiu TESTE-3; entrou TESTE-10
+Término: processo TESTE-10; instrução: SAIDA
+Troca de contexto: saiu TESTE-10; entrou TESTE-2
+Interrupção: processo TESTE-2; motivo: E/S
+Troca de contexto: saiu TESTE-2; entrou TESTE-1
+Interrupção: processo TESTE-1; motivo: E/S
+Troca de contexto: saiu TESTE-1; entrou TESTE-7
+Término: processo TESTE-7; instrução: SAIDA
+Troca de contexto: saiu TESTE-7; entrou TESTE-4
+Interrupção: processo TESTE-4; motivo: E/S
+Troca de contexto: saiu TESTE-4; entrou TESTE-9
+Término: processo TESTE-9; instrução: SAIDA
+Troca de contexto: saiu TESTE-9; entrou TESTE-6
+Interrupção: processo TESTE-6; motivo: E/S
+Troca de contexto: saiu TESTE-6; entrou TESTE-5
+Interrupção: processo TESTE-5; motivo: E/S
+Troca de contexto: saiu TESTE-5; entrou TESTE-2
+Interrupção: processo TESTE-2; motivo: E/S
+Troca de contexto: saiu TESTE-2; entrou TESTE-1
+Término: processo TESTE-1; instrução: SAIDA
+Troca de contexto: saiu TESTE-1; entrou TESTE-4
+Interrupção: processo TESTE-4; motivo: E/S
+Troca de contexto: saiu TESTE-4; entrou TESTE-6
+Término: processo TESTE-6; instrução: SAIDA
+Troca de contexto: saiu TESTE-6; entrou TESTE-5
+Interrupção: processo TESTE-5; motivo: E/S
+Troca de contexto: saiu TESTE-5; entrou TESTE-2
+Término: processo TESTE-2; instrução: SAIDA
+Troca de contexto: saiu TESTE-2; entrou TESTE-4
+Interrupção: processo TESTE-4; motivo: E/S
+Troca de contexto: saiu TESTE-4; entrou TESTE-5
+Interrupção: processo TESTE-5; motivo: E/S
+Troca de contexto: saiu TESTE-5; entrou CPU ociosa
+Quantum: 10
+Media de trocas: 3.50
+Media de instruções: 3.91
