@@ -1,52 +1,56 @@
-import os 
+import re
 import subprocess
-import matplotlib.pyplot as plt
-import re 
+import sys
+from pathlib import Path
 
 # Valores de quantum escolhidos para teste (pelo menos 10 valores)
 
 quantums_teste = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
 
-diretorio_programas = "programas"
-caminho_quantum = os.path.join(diretorio_programas, "quantum.txt")
+raiz = Path(__file__).resolve().parent
+diretorio_programas = raiz / "programas"
+caminho_quantum = diretorio_programas / "quantum.txt"
 
 def executar_testes():
     medias_trocas = []
     medias_instrucoes = []
+    quantum_original = caminho_quantum.read_text(encoding="utf-8")
 
-    for quantum in quantums_teste:
+    try:
+        for quantum in quantums_teste:
+            caminho_quantum.write_text(f"{quantum}\n", encoding="utf-8")
 
-        with open(caminho_quantum,"w") as f:
-            f.write(str(quantum))
+            print(f"Executando o escalonador com quantum = {quantum}")
 
-        print(f"Executando o escalonador com quantum = {quantum}")
+            resultado = subprocess.run(
+                [sys.executable, str(raiz / "Escalonador.py"), str(diretorio_programas)],
+                capture_output=True,
+                text=True,
+                cwd=raiz,
+            )
+            if resultado.returncode != 0:
+                raise RuntimeError(resultado.stderr or resultado.stdout)
 
-        # Executar o Escalonador 
-        subprocess.run(["python", "Escalonador.py", diretorio_programas], capture_output=True)
+            caminho_log = diretorio_programas / f"log{quantum:02d}.txt"
+            conteudo = caminho_log.read_text(encoding="utf-8")
 
-        # Ler o arquivo de saída
-        nome_log = f"log{quantum:02d}.txt"
-        caminho_log = os.path.join(diretorio_programas, nome_log)
+            match_trocas = re.search(r"MEDIA DE TROCAS:\s*([\d.]+)", conteudo, re.IGNORECASE)
+            match_instrucoes = re.search(
+                r"MEDIA DE INSTRU[CÇ][OÕ]ES:\s*([\d.]+)", conteudo, re.IGNORECASE
+            )
+            if not match_trocas or not match_instrucoes:
+                raise ValueError(f"Estatísticas não encontradas em {caminho_log}")
 
-        trocas = 0.0
-        instrucoes = 0.0
-
-        if os.path.exists(caminho_log):
-            with open(caminho_log, "r", encoding="utf-8") as f:
-                conteudo = f.read()
-
-                match_trocas = re.search(r"Media de trocas:\s*([\d.]+)", conteudo)
-                match_instrucoes = re.search(r"Media de instruções:\s*([\d.]+)", conteudo)
-
-                if match_trocas and match_instrucoes:
-                    trocas = float(match_trocas.group(1))
-                    instrucoes = float(match_instrucoes.group(1))
-                else:
-                    print(f"[AVISO] Dados de média não encontrados no ficheiro {nome_log}.")
-                    trocas = max(1.0, 30.0/quantum)
-                    instrucoes = min(15.0, quantum * 0.8)
-
-                medias_trocas.append(trocas)
-                medias_instrucoes.append(instrucoes)
+            medias_trocas.append(float(match_trocas.group(1)))
+            medias_instrucoes.append(float(match_instrucoes.group(1)))
+    finally:
+        caminho_quantum.write_text(quantum_original, encoding="utf-8")
 
     return quantums_teste, medias_trocas, medias_instrucoes
+
+
+if __name__ == "__main__":
+    quantums, trocas, instrucoes = executar_testes()
+    print("Quantum | Média de trocas | Média de instruções")
+    for quantum, media_trocas, media_instrucoes in zip(quantums, trocas, instrucoes):
+        print(f"{quantum:7} | {media_trocas:15g} | {media_instrucoes:19g}")

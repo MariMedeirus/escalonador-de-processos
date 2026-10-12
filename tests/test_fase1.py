@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from Escalonador import main
 from escalonador import BCP, Estado, carregar_processos, inicializar, ler_prioridades, ler_quantum
 from escalonador.bcp import TAMANHO_MAXIMO_PROGRAMA
 from escalonador.carregador import ler_programa
@@ -120,6 +121,25 @@ class TestEstruturas(unittest.TestCase):
             ["TESTE-7", "TESTE-4", "TESTE-8", "TESTE-9", "TESTE-6",
              "TESTE-5", "TESTE-10", "TESTE-2", "TESTE-3", "TESTE-1"],
         )
+
+
+class TestLogfile(unittest.TestCase):
+    def test_gera_log_com_eventos_estatisticas_e_quantum(self):
+        with tempfile.TemporaryDirectory() as temporario:
+            diretorio = Path(temporario)
+            escrever(diretorio, "01.txt", ["TESTE-IO", "E/S", "X=7", "SAIDA"])
+            escrever(diretorio, "prioridades.txt", ["1"])
+            escrever(diretorio, "quantum.txt", ["1"])
+
+            self.assertEqual(main(["Escalonador.py", str(diretorio)]), 0)
+
+            conteudo = (diretorio / "log01.txt").read_text(encoding="utf-8")
+            self.assertIn("Carregando TESTE-IO", conteudo)
+            self.assertIn("E/S iniciada em TESTE-IO", conteudo)
+            self.assertIn("TESTE-IO terminado. X=7. Y=0", conteudo)
+            self.assertIn("MEDIA DE TROCAS:", conteudo)
+            self.assertIn("MEDIA DE INSTRUCOES:", conteudo)
+            self.assertIn("QUANTUM: 1", conteudo)
 
 
 if __name__ == "__main__":

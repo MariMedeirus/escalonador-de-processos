@@ -10,21 +10,41 @@ fila de prontos e exibe o estado inicial do sistema.
 
 import sys
 from pathlib import Path
+from typing import TextIO
 
 from escalonador import carregar_processos, inicializar, ler_quantum
 from escalonador.bcp import Estado
 
 DIRETORIO_PADRAO = Path(__file__).resolve().parent / "programas"
 
-def executar_motor(tabela, prontos, quantum):
+def executar_motor(tabela, prontos, quantum, arquivo_log: TextIO) -> tuple[int, int]:
     """
     Loop principal de execucao do processador.
     Eh aqui que a simulacao do sistema operacional ganha vida e faz o time sharing.
     """
     
-    # Fila temporaria para os processos que pediram entrada e saida.
-    # Serve apenas para o codigo nao quebrar agora, a Mikelly fara a oficial.
-    bloqueados = [] 
+    fatias_executadas = 0
+    instrucoes_executadas = 0
+    bloqueados = []
+
+    def registrar(mensagem: str) -> None:
+        arquivo_log.write(mensagem + "\n")
+
+    def atualizar_bloqueados(ignorar=None) -> None:
+        restantes = []
+        for bloqueado, espera in bloqueados:
+            if bloqueado is ignorar:
+                restantes.append((bloqueado, espera))
+                continue
+            espera -= 1
+            if espera == 0:
+                prontos.inserir(bloqueado)
+            else:
+                restantes.append((bloqueado, espera))
+        bloqueados[:] = restantes
+
+    for processo in prontos:
+        registrar(f"Carregando {processo.nome}")
 
     # Laco principal do sistema operacional. 
     # Enquanto houver processos vivos na tabela, o nosso processador continua trabalhando.
@@ -32,13 +52,15 @@ def executar_motor(tabela, prontos, quantum):
         
         # Se a fila de prontos esta vazia, o processador fica ocioso.
         if prontos.vazia():
-            # Aqui, no futuro, o tempo vai passar ate um processo bloqueado ser liberado.
-            # Usamos o break temporario so para evitar um loop infinito nos testes de agora.
-            break 
+            if not bloqueados:
+                break
+            atualizar_bloqueados()
+            continue
             
         # Troca de contexto.
         # Tiramos o primeiro processo da fila de prontos, pois ele eh o que tem mais creditos.
         processo = prontos.remover_primeiro()
+        registrar(f"Executando {processo.nome}")
         
         # Mudamos o cracha dele para mostrar que ele eh o dono do processador neste momento.
         processo.estado = Estado.EXECUTANDO
@@ -80,6 +102,7 @@ def executar_motor(tabela, prontos, quantum):
             elif instrucao == "E/S":
                 # O programa pediu um dado externo. 
                 fez_es = True
+                registrar(f"E/S iniciada em {processo.nome}")
                 # Corta o laco na hora e perde o resto do tempo disponivel.
                 break 
                 
@@ -98,7 +121,7 @@ def executar_motor(tabela, prontos, quantum):
             # Se ele fez entrada e saida, ele vai para a espera. 
             # Muda o status para bloqueado e entra na fila temporaria.
             processo.estado = Estado.BLOQUEADO
-            bloqueados.append(processo)
+            bloqueados.append((processo, 2))
             
         else:
             # Se chegou aqui, o quantum acabou normalmente por limite de tempo.
@@ -106,9 +129,18 @@ def executar_motor(tabela, prontos, quantum):
             # O metodo ja coloca ele na posicao correta de acordo com os creditos que sobraram.
             prontos.inserir(processo) 
 
+        registrar(f"Interrompendo {processo.nome} após {comandos_executados} instruções")
+        fatias_executadas += 1
+        instrucoes_executadas += comandos_executados
+
+        if terminou:
+            registrar(f"{processo.nome} terminado. X={processo.x}. Y={processo.y}")
+
+        atualizar_bloqueados(ignorar=processo if fez_es else None)
+
         # Regra de redistribuicao de creditos.
         # Soma todos os creditos que restam nos processos prontos e bloqueados.
-        total_creditos = sum(p.creditos for p in prontos) + sum(p.creditos for p in bloqueados)
+        total_creditos = sum(p.creditos for p in prontos) + sum(p.creditos for p, _ in bloqueados)
         
         # A redistribuicao so acontece se todo mundo zerou os creditos e ainda existe gente viva.
         if total_creditos == 0 and len(tabela) > 0:
@@ -119,6 +151,8 @@ def executar_motor(tabela, prontos, quantum):
             # Como a quantidade de creditos de todo mundo mudou agora, precisamos avisar a fila de prontos.
             # Ela vai se reorganizar do maior para o menor credito.
             prontos.reordenar()
+
+    return fatias_executadas, instrucoes_executadas
 
 
 def main(argv: list[str]) -> int:
@@ -131,8 +165,16 @@ def main(argv: list[str]) -> int:
     print(f"Iniciando simulacao com quantum: {quantum}")
     print("-" * 40)
     
-    # Chama o motor principal passando as estruturas.
-    executar_motor(tabela, prontos, quantum)
+    caminho_log = diretorio / f"log{quantum:02d}.txt"
+    with caminho_log.open("w", encoding="utf-8") as arquivo_log:
+        fatias, instrucoes = executar_motor(tabela, prontos, quantum, arquivo_log)
+        media_trocas = fatias / len(processos)
+        media_instrucoes = instrucoes / fatias if fatias else 0
+        arquivo_log.write(f"MEDIA DE TROCAS: {media_trocas:g}\n")
+        arquivo_log.write(f"MEDIA DE INSTRUCOES: {media_instrucoes:g}\n")
+        arquivo_log.write(f"QUANTUM: {quantum}\n")
+
+    print(f"Log gerado: {caminho_log}")
     
     print("-" * 40)
     print("Simulacao concluida. Todos os processos realizaram saida.")
